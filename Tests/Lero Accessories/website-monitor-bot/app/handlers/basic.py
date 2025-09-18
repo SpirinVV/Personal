@@ -1,7 +1,3 @@
-"""
-Базовые обработчики команд бота.
-"""
-
 import logging
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
@@ -19,11 +15,9 @@ router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    """Обработчик команды /start"""
     async for session in get_db_session():
         user_service = UserService(session)
         
-        # Создаем или обновляем пользователя
         user = await user_service.create_or_update_user(
             telegram_id=message.from_user.id,
             username=message.from_user.username,
@@ -52,7 +46,6 @@ async def cmd_start(message: Message):
 /help - Справка по командам
         """
         
-        # Создаем клавиатуру
         keyboard = InlineKeyboardBuilder()
         keyboard.add(InlineKeyboardButton(text="➕ Добавить сайт", callback_data="add_website"))
         keyboard.add(InlineKeyboardButton(text="📋 Мои сайты", callback_data="list_websites"))
@@ -67,7 +60,6 @@ async def cmd_start(message: Message):
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
-    """Обработчик команды /help"""
     help_text = """
 📚 <b>Справка по командам</b>
 
@@ -99,7 +91,6 @@ async def cmd_help(message: Message):
 
 @router.message(Command("stats"))
 async def cmd_stats(message: Message):
-    """Обработчик команды /stats"""
     async for session in get_db_session():
         user_service = UserService(session)
         stats = await user_service.get_user_stats(message.from_user.id)
@@ -136,7 +127,6 @@ async def cmd_stats(message: Message):
 
 @router.message(Command("settings"))
 async def cmd_settings(message: Message):
-    """Обработчик команды /settings"""
     keyboard = InlineKeyboardBuilder()
     keyboard.add(InlineKeyboardButton(text="🔔 Уведомления", callback_data="settings_notifications"))
     keyboard.add(InlineKeyboardButton(text="📅 Отчеты", callback_data="settings_reports"))
@@ -152,11 +142,9 @@ async def cmd_settings(message: Message):
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
-    """Статус бота и системы"""
     from ..models import test_database_connection
     from ..services.monitor import MonitoringService
     
-    # Проверяем подключение к БД
     db_status = "✅ Подключена" if await test_database_connection() else "❌ Недоступна"
     
     status_text = f"""
@@ -173,10 +161,8 @@ async def cmd_status(message: Message):
     await message.answer(status_text)
 
 
-# URL Detection - автоматическое добавление сайтов
 @router.message(F.text.regexp(r'https?://[^\s]+'))
 async def auto_add_website(message: Message):
-    """Автоматическое добавление сайта по URL"""
     url = message.text.strip()
     
     keyboard = InlineKeyboardBuilder()
@@ -195,5 +181,4 @@ async def auto_add_website(message: Message):
 
 
 def register_basic_handlers(dp) -> None:
-    """Регистрация базовых обработчиков"""
     dp.include_router(router)
