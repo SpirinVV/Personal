@@ -1,0 +1,68 @@
+services:
+  # Приложение бота
+  bot:
+    build: .
+    container_name: website_monitor_bot
+    command: ["python", "-m", "app.main"]
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://monitor_user:monitor_password@postgres:5432/website_monitor
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=website_monitor
+      - DB_USER=monitor_user
+      - DB_PASSWORD=monitor_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - monitor_network
+
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: website_monitor_db
+    environment:
+      POSTGRES_DB: website_monitor
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor_user -d website_monitor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - monitor_network
+
+  # Админ панель для PostgreSQL (опционально)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: website_monitor_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - monitor_network
+    profiles:
+      - admin
+
+volumes:
+  postgres_data:
+
+networks:
+  monitor_network:
+    driver: bridge
